@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power BI Embedded Example</title>
+    <!-- Include Power BI JavaScript library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.2.6/jquery.js"></script>
+    <script src="https://microsoft.github.io/PowerBI-JavaScript/demo/node_modules/powerbi-client/dist/powerbi.js"></script>
+    <!-- Include custom CSS for embed container -->
+    <style>
+        /* Стили для Embed-container */
+        .Embed-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh; /* Высота 100% от высоты экрана */
+            width: 100vw; /* Ширина 100% от ширины родительского элемента (или окна браузера) */
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <!-- Your content goes here -->
+    <div id="embedContainer" class="Embed-container"></div>
+
+    <!-- Include your application logic script -->
+    <script>
+        let loadedResolve, reportLoaded = new Promise((res, rej) => { loadedResolve = res; });
+        let renderedResolve, reportRendered = new Promise((res, rej) => { renderedResolve = res; });
+        const reportId = "2a175d5f-fae8-449d-869f-53d4dee9d447";
+        const groupId = "your_groupId_here";
+
+        // Get models. models contains enums that can be used.
+        models = window['powerbi-client'].models;
+
+        // Embed a Power BI report in the given HTML element with the given configurations
+        // Read more about how to embed a Power BI report in your application here: https://go.microsoft.com/fwlink/?linkid=2153590
+        function embedPowerBIReport() {
+            // Read embed application token
+            let accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkwxS2ZLRklfam5YYndXYzIyeFp4dzFzVUhIMCIsImtpZCI6IkwxS2ZLRklfam5YYndXYzIyeFp4dzFzVUhIMCJ9.eyJhdWQiOiJodHRwczovL2FuYWx5c2lzLndpbmRvd3MubmV0L3Bvd2VyYmkvYXBpIiwiaXNzIjoiaHR0cHM6Ly9zdHMud2luZG93cy5uZXQvYWI1NzBjMTItOTQ4OS00Mzk5LWFjMTctMjQ1ZmIyYzM4NGVjLyIsImlhdCI6MTcxODQ4NDc3MywibmJmIjoxNzE4NDg0NzczLCJleHAiOjE3MTg0ODg3MjEsImFjY3QiOjAsImFjciI6IjEiLCJhaW8iOiJBVFFBeS84WEFBQUEzNlBESFJ5aUg1dXZjM1hVNHFOY3k0eFNzU2orS1N3a1NIQmUxL2pHWmNWcXNFUXJha3FLNVpESWVqZ3BUU2pNIiwiYW1yIjpbInB3ZCJdLCJhcHBpZCI6Ijg3MWMwMTBmLTVlNjEtNGZiMS04M2FjLTk4NjEwYTdlOTExMCIsImFwcGlkYWNyIjoiMCIsImZhbWlseV9uYW1lIjoi0JTQvNC40YLRgNC40LkiLCJnaXZlbl9uYW1lIjoi0JXQu9Cw0L3RhtC10LIiLCJpZHR5cCI6InVzZXIiLCJpcGFkZHIiOiIyMTIuMTMuMTU4LjIxOCIsIm5hbWUiOiLQldC70LDQvdGG0LXQsiDQlNC80LjRgtGA0LjQuSIsIm9pZCI6IjU4MGRkZDM0LWE5NDAtNDFiYy1hNTM5LTA0NmRhYjA5OTJmNyIsInB1aWQiOiIxMDAzMjAwMjZENDE4N0JCIiwicmgiOiIwLkFVc0FFZ3hYcTRtVW1VT3NGeVJmc3NPRTdBa0FBQUFBQUFBQXdBQUFBQUFBQUFBWkFkay4iLCJzY3AiOiJ1c2VyX2ltcGVyc29uYXRpb24iLCJzaWduaW5fc3RhdGUiOlsia21zaSJdLCJzdWIiOiJ4UFZXZ2V6X2xlb21SOG16cVRfTHF4SXZnNVhCclJMNVJZMDJkNWxwcUNFIiwidGlkIjoiYWI1NzBjMTItOTQ4OS00Mzk5LWFjMTctMjQ1ZmIyYzM4NGVjIiwidW5pcXVlX25hbWUiOiJlbGFudHNldi5kQGVzaWwuZWR1Lmt6IiwidXBuIjoiZWxhbnRzZXYuZEBlc2lsLmVkdS5reiIsInV0aSI6ImFiaEpKV1IycTAyM0V3UlNMYlJJQUEiLCJ2ZXIiOiIxLjAiLCJ3aWRzIjpbIjYyZTkwMzk0LTY5ZjUtNDIzNy05MTkwLTAxMjE3NzE0NWUxMCIsImI3OWZiZjRkLTNlZjktNDY4OS04MTQzLTc2YjE5NGU4NTUwOSJdLCJ4bXNfaWRyZWwiOiIxIDE0IiwieG1zX3BsIjoicnUtUlUifQ.HnrA7PKdifxWfjarc0ao1nVe-GkqrcokVm_vKSzvskXFseoN8vjAHlMMIcV6t7eZMWq5rDOMEye0C_Vj6t1xoup61d92fDqGwi3vg7_nnM95bgx-ThWY2mawCmTBpnuyDefIcBWMim4d39EWXeMS3vfQ9Q3KsfMxgOf8HtzPbVWYFeZLh0E_albFe4wpINrPRVITAVUE2_CanRb-Kwo2b8e2oAsGQklWs3u6o0Fg3RB701AfT9cUedo59aiEPuY6dc6O9kyaEHuLHUDIcSdjpp2k8Fw2Fjemm51gZc0KS9lodBmEoY7MDeYkzAEbH8eHRVXmHm1trNu9M0M-w7RYkA";
+
+            // Read embed URL
+            let embedUrl = `https://app.powerbi.com/reportEmbed?reportId=2a175d5f-fae8-449d-869f-53d4dee9d447&groupId=a4d521ba-900f-432b-a7f0-58940f9ae639&w=2&config=eyJjbHVzdGVyVXJsIjoiaHR0cHM6Ly9XQUJJLVdFU1QtRVVST1BFLUYtUFJJTUFSWS1yZWRpcmVjdC5hbmFseXNpcy53aW5kb3dzLm5ldCIsImVtYmVkRmVhdHVyZXMiOnsidXNhZ2VNZXRyaWNzVk5leHQiOnRydWV9fQ%3d%3d`;
+
+            // Read report Id
+            let embedReportId = reportId;
+
+            // Read embed type from radio
+            //let tokenType = TOKEN_TYPE;
+
+            // We give All permissions to demonstrate switching between View and Edit mode and saving report.
+            let permissions = models.Permissions.All;
+
+            // Create the embed configuration object for the report
+            // For more information see https://go.microsoft.com/fwlink/?linkid=2153590
+            let config = {
+                type: 'report',
+                tokenType: models.TokenType.Aad,  // Correct reference
+                accessToken: accessToken,
+                embedUrl: embedUrl,
+                id: embedReportId,
+                permissions: permissions,
+                viewMode: models.ViewMode.View,
+                settings: {
+                    filterPaneEnabled: false,
+                    navContentPaneEnabled: true,
+                    layoutType: models.LayoutType.Custom, // You can experiment with layoutType
+                    panes: {
+                        filters: {
+                            visible: false
+                        },
+                        pageNavigation: {
+                            visible: false
+                        }
+                    },
+                    bars: {
+                        statusBar: {
+                            visible: false
+                        }
+                    }
+                }
+            };
+
+            // Get a reference to the embedded report HTML element
+            let embedContainer = $('#embedContainer')[0];
+
+            // Embed the report and display it within the div container.
+            report = powerbi.embed(embedContainer, config);
+
+            // report.off removes all event handlers for a specific event
+            report.off("loaded");
+
+            // report.on will add an event handler
+            report.on("loaded", function () {
+                loadedResolve();
+                report.off("loaded");
+            });
+
+            // report.off removes all event handlers for a specific event
+            report.off("error");
+
+            report.on("error", function (event) {
+                console.log(event.detail);
+            });
+
+            // report.off removes all event handlers for a specific event
+            report.off("rendered");
+
+            // report.on will add an event handler
+            report.on("rendered", function () {
+                renderedResolve();
+                report.off("rendered");
+            });
+        }
+
+        embedPowerBIReport();
+        reportLoaded;
+
+        // Insert here the code you want to run after the report is loaded
+
+        reportRendered;
+
+        // Insert here the code you want to run after the report is rendered
+    </script>
+</body>
+</html>
